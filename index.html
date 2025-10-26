@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Кликер</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ TG Кликер</h1>
+            <div class="user-info" id="user-info"></div>
+        </div>
+        
+        <div class="counter-section">
+            <div class="score" id="score">0</div>
+            <button class="click-btn" id="click-btn">КЛИКНИ МЕНЯ!</button>
+            <div class="stats">
+                <p>Кликов в секунду: <span id="cps">0</span></p>
+                <p>Сила клика: <span id="power">1</span></p>
+            </div>
+        </div>
+
+        <div class="shop">
+            <h2>💼 Магазин улучшений</h2>
+            <div class="upgrades">
+                <div class="upgrade-item">
+                    <button class="upgrade-btn" onclick="buyUpgrade('power')">
+                        Усилитель клика (+1 к силе)<br>
+                        <span class="price">Цена: 10 кликов</span>
+                    </button>
+                </div>
+                <div class="upgrade-item">
+                    <button class="upgrade-btn" onclick="buyUpgrade('auto')">
+                        Автокликер (+1 клик/сек)<br>
+                        <span class="price">Цена: 30 кликов</span>
+                    </button>
+                </div>
+                <div class="upgrade-item">
+                    <button class="upgrade-btn" onclick="buyUpgrade('mega')">
+                        Мега-буст (x2 вся сила)<br>
+                        <span class="price">Цена: 100 кликов</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="leaderboard">
+            <h2>🏆 Таблица лидеров</h2>
+            <div id="leaderboard-list"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
