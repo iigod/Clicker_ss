@@ -9,6 +9,9 @@ let gameState = {
     power: 1,
     cps: 0,
     level: 1,
+    autoClickerEnabled: false,
+    lastSaveTime: Date.now(),
+    backgroundEarnings: 0,
     upgrades: {
         power: { level: 0, cost: 10 },
         auto: { level: 0, cost: 30 },
@@ -77,14 +80,108 @@ function loadGame() {
     if (saved) {
         const parsed = JSON.parse(saved);
         gameState = { ...gameState, ...parsed };
+        
+        // Проверяем фоновый заработок
+        checkBackgroundEarnings();
     }
     updateDisplay();
     updateAchievementsDisplay();
+    updateAutoClickerButton();
+}
+
+// Проверка фонового заработка
+function checkBackgroundEarnings() {
+    const now = Date.now();
+    const timeDiff = now - gameState.lastSaveTime;
+    
+    if (timeDiff > 30000 && gameState.autoClickerEnabled && gameState.cps > 0) { // 30 секунд минимальное отсутствие
+        const minutesAway = Math.floor(timeDiff / 60000);
+        const maxHours = 24; // Максимум 24 часа фоновой работы
+        
+        const effectiveMinutes = Math.min(minutesAway, maxHours * 60);
+        const backgroundCPS = gameState.cps * 0.25; // 25% эффективности (75% менее эффективно)
+        const earned = Math.floor(backgroundCPS * effectiveMinutes * 60);
+        
+        if (earned > 0) {
+            gameState.backgroundEarnings = earned;
+            gameState.score += earned;
+            showBackgroundEarningsPopup(earned, effectiveMinutes);
+        }
+    }
+    
+    gameState.lastSaveTime = now;
+    saveGame();
+}
+
+// Показ попапа фонового заработка
+function showBackgroundEarningsPopup(earned, minutes) {
+    const popup = document.getElementById('background-popup');
+    const content = document.getElementById('background-earned-amount');
+    
+    content.textContent = `${earned} кликов`;
+    
+    const popupContent = document.getElementById('background-popup-content');
+    popupContent.innerHTML = `
+        <p>Пока вы отсутствовали ${Math.floor(minutes / 60)}ч ${minutes % 60}м, ваш автокликер заработал:</p>
+        <div class="background-earned-amount">${earned} кликов</div>
+        <p class="background-note">💡 Автокликер работает на 25% эффективности когда приложение закрыто</p>
+    `;
+    
+    popup.classList.remove('hidden');
+}
+
+// Закрытие попапа фонового заработка
+function closeBackgroundPopup() {
+    document.getElementById('background-popup').classList.add('hidden');
+    gameState.backgroundEarnings = 0;
+    updateDisplay();
 }
 
 // Сохранение игры
 function saveGame() {
+    gameState.lastSaveTime = Date.now();
     localStorage.setItem('clickerGame', JSON.stringify(gameState));
+}
+
+// Включение/выключение автокликера
+function toggleAutoClicker() {
+    if (gameState.upgrades.auto.level > 0) {
+        gameState.autoClickerEnabled = !gameState.autoClickerEnabled;
+        updateAutoClickerButton();
+        saveGame();
+    } else if (gameState.score >= gameState.upgrades.auto.cost) {
+        // Покупка автокликера
+        buyUpgrade('auto');
+        gameState.autoClickerEnabled = true;
+        updateAutoClickerButton();
+    }
+}
+
+// Обновление кнопки автокликера
+function updateAutoClickerButton() {
+    const btn = document.getElementById('auto-clicker-btn');
+    const status = document.getElementById('auto-status');
+    const text = document.getElementById('auto-clicker-text');
+    
+    if (gameState.upgrades.auto.level > 0) {
+        // Улучшение уже куплено
+        text.textContent = `Автокликер (${gameState.cps} клик/сек)`;
+        btn.disabled = false;
+        
+        if (gameState.autoClickerEnabled) {
+            status.textContent = '🟢 Вкл';
+            status.classList.add('active');
+        } else {
+            status.textContent = '🔴 Выкл';
+            status.classList.remove('active');
+        }
+    } else {
+        // Улучшение еще не куплено
+        text.textContent = 'Автокликер (+1 клик/сек)';
+        status.textContent = '🔒 Заблокировано';
+        status.classList.remove('active');
+        btn.disabled = gameState.score < gameState.upgrades.auto.cost;
+    }
 }
 
 // Основной клик
@@ -231,6 +328,10 @@ function buyUpgrade(type) {
             case 'auto':
                 gameState.cps += 1;
                 upgrade.cost = Math.floor(upgrade.cost * 2);
+                // При первой покупке включаем автокликер
+                if (upgrade.level === 0) {
+                    gameState.autoClickerEnabled = true;
+                }
                 break;
             case 'mega':
                 gameState.power *= 2;
@@ -242,13 +343,14 @@ function buyUpgrade(type) {
         upgrade.level++;
         checkAchievements(); // Проверяем достижения после покупки
         updateDisplay();
+        updateAutoClickerButton();
         saveGame();
     }
 }
 
 // Автокликер
 setInterval(() => {
-    if (gameState.cps > 0) {
+    if (gameState.autoClickerEnabled && gameState.cps > 0) {
         gameState.score += gameState.cps;
         checkLevelUp();
         checkAchievements();
@@ -264,6 +366,10 @@ function updateDisplay() {
     document.getElementById('power').textContent = gameState.power;
     document.getElementById('level').textContent = gameState.level;
     
+    // Обновление информации о фоновом заработке
+    const backgroundInfo = document.getElementById('background-earned');
+    backgroundInfo.textContent = gameState.backgroundEarnings;
+    
     // Обновление информации о пользователе Telegram
     const user = tg.initDataUnsafe.user;
     if (user) {
@@ -275,10 +381,12 @@ function updateDisplay() {
     
     // Обновление кнопок улучшений
     document.querySelectorAll('.upgrade-btn').forEach(btn => {
-        const upgradeType = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
-        const upgrade = gameState.upgrades[upgradeType];
-        btn.querySelector('.price').textContent = `Цена: ${upgrade.cost} кликов`;
-        btn.disabled = gameState.score < upgrade.cost;
+        if (btn.id !== 'auto-clicker-btn') {
+            const upgradeType = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+            const upgrade = gameState.upgrades[upgradeType];
+            btn.querySelector('.price').textContent = `Цена: ${upgrade.cost} кликов`;
+            btn.disabled = gameState.score < upgrade.cost;
+        }
     });
 }
 
@@ -330,10 +438,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateLeaderboard, 5000);
 });
 
-// Обработка закрытия
+// Обработка закрытия приложения
 tg.onEvent('viewportChanged', () => {
     if (tg.isClosingConfirmationEnabled) {
         saveGame();
         updateLeaderboard();
     }
+});
+
+// Сохраняем игру при закрытии вкладки/приложения
+window.addEventListener('beforeunload', () => {
+    saveGame();
 });

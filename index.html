@@ -21,6 +21,7 @@
                 <p>Кликов в секунду: <span id="cps">0</span></p>
                 <p>Сила клика: <span id="power">1</span></p>
                 <p>Уровень: <span id="level">1</span></p>
+                <p class="background-info" id="background-info">⚡ Фоновая работа: <span id="background-earned">0</span> кликов</p>
             </div>
         </div>
 
@@ -34,9 +35,10 @@
                     </button>
                 </div>
                 <div class="upgrade-item">
-                    <button class="upgrade-btn" onclick="buyUpgrade('auto')">
-                        Автокликер (+1 клик/сек)<br>
+                    <button class="upgrade-btn" id="auto-clicker-btn" onclick="toggleAutoClicker()">
+                        <span id="auto-clicker-text">Автокликер (+1 клик/сек)</span><br>
                         <span class="price">Цена: 30 кликов</span>
+                        <span class="auto-status" id="auto-status">🔴 Выкл</span>
                     </button>
                 </div>
                 <div class="upgrade-item">
@@ -68,6 +70,19 @@
             <span class="close-popup">&times;</span>
             <h3>🎉 Новое достижение!</h3>
             <div id="popup-achievement-content"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для фонового заработка -->
+    <div id="background-popup" class="popup hidden">
+        <div class="popup-content">
+            <span class="close-popup" onclick="closeBackgroundPopup()">&times;</span>
+            <h3>💰 Фоновый заработок!</h3>
+            <div id="background-popup-content">
+                <p>Пока вы отсутствовали, ваш автокликер заработал:</p>
+                <div class="background-earned-amount" id="background-earned-amount">0 кликов</div>
+                <p class="background-note">💡 Автокликер работает на 75% эффективности когда приложение закрыто</p>
+            </div>
         </div>
     </div>
 
