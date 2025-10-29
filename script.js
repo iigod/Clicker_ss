@@ -34,6 +34,9 @@ let gameState = {
     }
 };
 
+// Глобальная таблица лидеров
+let globalLeaderboard = [];
+
 // Система достижений
 const achievementsConfig = {
     firstClick: {
@@ -81,7 +84,7 @@ const achievementsConfig = {
 };
 
 // Загрузка сохраненных данных
-function loadGame() {
+async function loadGame() {
     const saved = localStorage.getItem('clickerGame');
     if (saved) {
         const parsed = JSON.parse(saved);
@@ -91,10 +94,143 @@ function loadGame() {
         checkBackgroundEarnings();
     }
     
+    // Загружаем глобальную таблицу лидеров
+    await loadGlobalLeaderboard();
+    
     updateDisplay();
     updateAchievementsDisplay();
     updateAutoClickerButton();
     startNotificationTimer();
+}
+
+// Загрузка глобальной таблицы лидеров из Cloud Storage
+async function loadGlobalLeaderboard() {
+    try {
+        // Пытаемся получить данные из Cloud Storage Telegram
+        const data = await tg.CloudStorage.getItem('global_leaderboard');
+        if (data) {
+            globalLeaderboard = JSON.parse(data);
+        } else {
+            // Если данных нет, создаем демо-игроков
+            globalLeaderboard = [
+                { id: 'bot1', name: 'PixelMaster', score: 1250, level: 25, timestamp: Date.now() },
+                { id: 'bot2', name: 'ClickKing', score: 980, level: 20, timestamp: Date.now() },
+                { id: 'bot3', name: 'TurboClick', score: 750, level: 15, timestamp: Date.now() },
+                { id: 'bot4', name: 'MegaClick', score: 620, level: 13, timestamp: Date.now() },
+                { id: 'bot5', name: 'SuperPlayer', score: 480, level: 10, timestamp: Date.now() }
+            ];
+            await saveGlobalLeaderboard();
+        }
+    } catch (error) {
+        console.log('Cloud Storage недоступен, используем локальные данные');
+        // Fallback на локальные демо-данные
+        globalLeaderboard = [
+            { id: 'bot1', name: 'PixelMaster', score: 1250, level: 25, timestamp: Date.now() },
+            { id: 'bot2', name: 'ClickKing', score: 980, level: 20, timestamp: Date.now() },
+            { id: 'bot3', name: 'TurboClick', score: 750, level: 15, timestamp: Date.now() },
+            { id: 'bot4', name: 'MegaClick', score: 620, level: 13, timestamp: Date.now() },
+            { id: 'bot5', name: 'SuperPlayer', score: 480, level: 10, timestamp: Date.now() }
+        ];
+    }
+}
+
+// Сохранение глобальной таблицы лидеров в Cloud Storage
+async function saveGlobalLeaderboard() {
+    try {
+        await tg.CloudStorage.setItem('global_leaderboard', JSON.stringify(globalLeaderboard));
+    } catch (error) {
+        console.log('Не удалось сохранить в Cloud Storage');
+    }
+}
+
+// Обновление данных игрока в глобальной таблице лидеров
+async function updatePlayerInLeaderboard() {
+    const user = tg.initDataUnsafe.user;
+    if (!user) return;
+
+    const playerData = {
+        id: user.id.toString(),
+        name: user.first_name || 'Аноним',
+        username: user.username || '',
+        score: gameState.score,
+        level: gameState.level,
+        timestamp: Date.now()
+    };
+
+    // Находим игрока в таблице
+    const existingPlayerIndex = globalLeaderboard.findIndex(p => p.id === playerData.id);
+    
+    if (existingPlayerIndex !== -1) {
+        // Обновляем существующего игрока, если новый счет больше
+        if (playerData.score > globalLeaderboard[existingPlayerIndex].score) {
+            globalLeaderboard[existingPlayerIndex] = playerData;
+        }
+    } else {
+        // Добавляем нового игрока
+        globalLeaderboard.push(playerData);
+    }
+
+    // Сортируем по очкам (по убыванию)
+    globalLeaderboard.sort((a, b) => b.score - a.score);
+    
+    // Ограничиваем топ-20 игроков
+    globalLeaderboard = globalLeaderboard.slice(0, 20);
+    
+    // Удаляем старые записи (старше 30 дней)
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    globalLeaderboard = globalLeaderboard.filter(player => player.timestamp > thirtyDaysAgo);
+
+    // Сохраняем обновленную таблицу
+    await saveGlobalLeaderboard();
+    
+    // Обновляем отображение
+    updateLeaderboardDisplay();
+}
+
+// Отображение таблицы лидеров
+function updateLeaderboardDisplay() {
+    const user = tg.initDataUnsafe.user;
+    if (!user) return;
+
+    const currentPlayerId = user.id.toString();
+    
+    const leaderboardHTML = globalLeaderboard.map((player, index) => {
+        const isCurrentPlayer = player.id === currentPlayerId;
+        const rank = index + 1;
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+        
+        return `
+            <div class="leaderboard-item ${isCurrentPlayer ? 'current-player' : ''}">
+                <span>${medal} ${player.name} ${player.username ? `(@${player.username})` : ''}</span>
+                <span>${player.score}</span>
+                <span>${player.level}</span>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('leaderboard-list').innerHTML = leaderboardHTML;
+    
+    // Если текущий игрок не в топ-20, показываем его отдельно
+    const currentPlayerInTop = globalLeaderboard.find(p => p.id === currentPlayerId);
+    if (!currentPlayerInTop) {
+        const currentPlayerData = {
+            id: currentPlayerId,
+            name: user.first_name || 'Аноним',
+            username: user.username || '',
+            score: gameState.score,
+            level: gameState.level
+        };
+        
+        const currentPlayerHTML = `
+            <div class="leaderboard-item current-player" style="background: rgba(106, 90, 205, 0.5);">
+                <span>⭐ Вы: ${currentPlayerData.name} ${currentPlayerData.username ? `(@${currentPlayerData.username})` : ''}</span>
+                <span>${currentPlayerData.score}</span>
+                <span>${currentPlayerData.level}</span>
+            </div>
+        `;
+        
+        document.getElementById('leaderboard-list').innerHTML += currentPlayerHTML;
+    }
 }
 
 // Проверка фонового заработка
@@ -146,9 +282,12 @@ function closeBackgroundPopup() {
 }
 
 // Сохранение игры
-function saveGame() {
+async function saveGame() {
     gameState.lastSaveTime = Date.now();
     localStorage.setItem('clickerGame', JSON.stringify(gameState));
+    
+    // Обновляем игрока в глобальной таблице лидеров
+    await updatePlayerInLeaderboard();
 }
 
 // Таймер уведомлений (каждые 2 часа)
@@ -172,11 +311,11 @@ function closeNotification() {
 }
 
 // Включение/выключение автокликера
-function toggleAutoClicker() {
+async function toggleAutoClicker() {
     if (gameState.upgrades.auto.level > 0) {
         gameState.autoClickerEnabled = !gameState.autoClickerEnabled;
         updateAutoClickerButton();
-        saveGame();
+        await saveGame();
     } else if (gameState.score >= gameState.upgrades.auto.cost) {
         buyUpgrade('auto');
         gameState.autoClickerEnabled = true;
@@ -210,7 +349,7 @@ function updateAutoClickerButton() {
 }
 
 // Покупка бустов
-function buyBoost(boostType) {
+async function buyBoost(boostType) {
     const boost = gameState.boosts[boostType];
     
     if (gameState.score >= boost.cost) {
@@ -221,7 +360,7 @@ function buyBoost(boostType) {
         activateBoost(boostType);
         
         updateDisplay();
-        saveGame();
+        await saveGame();
     }
 }
 
@@ -255,7 +394,7 @@ function activateBoost(boostType) {
 }
 
 // Основной клик с учетом бустов
-document.getElementById('click-btn').addEventListener('click', () => {
+document.getElementById('click-btn').addEventListener('click', async () => {
     let clickPower = gameState.power;
     
     // Проверяем активные бусты
@@ -283,7 +422,7 @@ document.getElementById('click-btn').addEventListener('click', () => {
     checkLevelUp();
     checkAchievements();
     updateDisplay();
-    saveGame();
+    await saveGame(); // Сохраняем и обновляем лидерборд
     
     // Анимация клика
     animateClick();
@@ -330,7 +469,7 @@ function checkAchievements() {
 }
 
 // Разблокировка достижения
-function unlockAchievement(achievementId, config) {
+async function unlockAchievement(achievementId, config) {
     switch(achievementId) {
         case 'firstClick':
             gameState.score += 5;
@@ -358,7 +497,7 @@ function unlockAchievement(achievementId, config) {
     showAchievementPopup(config);
     updateAchievementsDisplay();
     updateDisplay();
-    saveGame();
+    await saveGame();
 }
 
 // Показ попапа достижения
@@ -410,7 +549,7 @@ function updateAchievementsDisplay() {
 }
 
 // Покупка улучшений
-function buyUpgrade(type) {
+async function buyUpgrade(type) {
     const upgrade = gameState.upgrades[type];
     
     if (gameState.score >= upgrade.cost) {
@@ -439,12 +578,12 @@ function buyUpgrade(type) {
         checkAchievements();
         updateDisplay();
         updateAutoClickerButton();
-        saveGame();
+        await saveGame();
     }
 }
 
 // Автокликер
-setInterval(() => {
+setInterval(async () => {
     if (gameState.autoClickerEnabled && gameState.cps > 0) {
         let earned = gameState.cps;
         
@@ -460,7 +599,7 @@ setInterval(() => {
         checkLevelUp();
         checkAchievements();
         updateDisplay();
-        saveGame();
+        await saveGame();
     }
 }, 1000);
 
@@ -486,7 +625,7 @@ function updateDisplay() {
     const user = tg.initDataUnsafe.user;
     if (user) {
         document.getElementById('user-info').innerHTML = `
-            <p>Игрок: ${user.first_name || 'Аноним'}</p>
+            <p>Игрок: ${user.first_name || 'Аноним'} ${user.username ? `(@${user.username})` : ''}</p>
             <p>ID: ${user.id}</p>
         `;
     }
@@ -521,56 +660,6 @@ function updateProgressBars() {
     }
 }
 
-// Таблица лидеров (расширенная версия)
-function updateLeaderboard() {
-    // В реальном приложении здесь был бы запрос к серверу
-    // Сейчас используем демо-данные + данные текущего пользователя
-    
-    const demoPlayers = [
-        { id: 'bot1', name: 'PixelMaster', score: 1250, level: 25 },
-        { id: 'bot2', name: 'ClickKing', score: 980, level: 20 },
-        { id: 'bot3', name: 'TurboClick', score: 750, level: 15 },
-        { id: 'bot4', name: 'MegaClick', score: 620, level: 13 },
-        { id: 'bot5', name: 'SuperPlayer', score: 480, level: 10 }
-    ];
-    
-    const user = tg.initDataUnsafe.user;
-    if (user) {
-        const currentPlayer = {
-            id: user.id,
-            name: user.first_name || 'Аноним',
-            score: gameState.score,
-            level: gameState.level
-        };
-        
-        // Объединяем демо-игроков с текущим игроком
-        let allPlayers = [...demoPlayers, currentPlayer];
-        
-        // Сортируем по очкам
-        allPlayers.sort((a, b) => b.score - a.score);
-        
-        // Ограничиваем топ-10
-        const topPlayers = allPlayers.slice(0, 10);
-        
-        const leaderboardHTML = topPlayers.map((player, index) => `
-            <div class="leaderboard-item ${player.id === user.id ? 'current-player' : ''}">
-                <span>${index + 1}. ${player.name}</span>
-                <span>${player.score}</span>
-                <span>${player.level}</span>
-            </div>
-        `).join('');
-        
-        document.getElementById('leaderboard-list').innerHTML = leaderboardHTML;
-        
-        // Подсвечиваем текущего игрока
-        document.querySelectorAll('.leaderboard-item').forEach(item => {
-            if (item.classList.contains('current-player')) {
-                item.style.background = 'rgba(106, 90, 205, 0.3)';
-            }
-        });
-    }
-}
-
 // Закрытие попапа
 document.querySelector('.close-popup').addEventListener('click', () => {
     document.getElementById('achievement-popup').classList.add('hidden');
@@ -579,15 +668,17 @@ document.querySelector('.close-popup').addEventListener('click', () => {
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', () => {
     loadGame();
-    updateLeaderboard();
-    setInterval(updateLeaderboard, 10000); // Обновлять лидерборд каждые 10 секунд
+    
+    // Обновляем лидерборд каждые 5 секунд
+    setInterval(() => {
+        updateLeaderboardDisplay();
+    }, 5000);
 });
 
 // Обработка закрытия приложения
 tg.onEvent('viewportChanged', () => {
     if (tg.isClosingConfirmationEnabled) {
         saveGame();
-        updateLeaderboard();
     }
 });
 
