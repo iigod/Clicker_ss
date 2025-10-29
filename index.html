@@ -3,54 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Кликер</title>
+    <title>Pixel Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <!-- Приветственный экран -->
+    <div id="welcome-screen" class="welcome-screen">
+        <div class="welcome-content">
+            <div class="pixel-title">🎮 Pixel Clicker</div>
+            <div class="welcome-text">
+                <p>Добро пожаловать в уютный пиксельный мир!</p>
+                <p>Кликай, улучшай и соревнуйся с друзьями!</p>
+                <div class="pixel-divider"></div>
+                <p class="feature">⚡ Автокликер</p>
+                <p class="feature">🎯 Система достижений</p>
+                <p class="feature">🏆 Таблица лидеров</p>
+                <p class="feature">💎 Мощные бусты</p>
+            </div>
+            <div class="other-game">
+                <p>Также попробуйте нашу новую игру:</p>
+                <a href="#" id="other-game-link" class="pixel-button">🚀 Cosmic Adventure</a>
+            </div>
+            <div class="swipe-hint">← Свайпните, чтобы начать →</div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div id="main-interface" class="container hidden">
         <div class="header">
-            <h1>⚡ TG Кликер</h1>
+            <h1 class="pixel-title">🎮 Pixel Clicker</h1>
             <div class="user-info" id="user-info"></div>
         </div>
         
+        <!-- Гифка над кнопкой -->
+        <div class="animation-container">
+            <img src="https://media.giphy.com/media/l0HlSF6p95QkP5WX6/giphy.gif" alt="Click Animation" class="click-animation" id="click-animation">
+        </div>
+
         <div class="counter-section">
             <div class="score" id="score">0</div>
-            <button class="click-btn" id="click-btn">КЛИКНИ МЕНЯ!</button>
+            <button class="click-btn pixel-button" id="click-btn">🎯 КЛИКНИ МЕНЯ!</button>
             <div class="stats">
-                <p>Кликов в секунду: <span id="cps">0</span></p>
-                <p>Сила клика: <span id="power">1</span></p>
-                <p>Уровень: <span id="level">1</span></p>
+                <p>📊 Кликов в секунду: <span id="cps">0</span></p>
+                <p>💪 Сила клика: <span id="power">1</span></p>
+                <p>⭐ Уровень: <span id="level">1</span></p>
                 <p class="background-info" id="background-info">⚡ Фоновая работа: <span id="background-earned">0</span> кликов</p>
             </div>
         </div>
 
+        <!-- Прогресс-бар для целей -->
+        <div class="progress-section">
+            <h3>🎯 Цели на сегодня</h3>
+            <div class="progress-bars">
+                <div class="progress-item">
+                    <span>🚀 Следующий буст: <span id="next-boost-target">100</span> кликов</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="boost-progress"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <span>🏆 Следующее достижение: <span id="next-achievement-target">10</span> кликов</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="achievement-progress"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="shop">
-            <h2>💼 Магазин улучшений</h2>
+            <h2>🛍️ Магазин улучшений</h2>
             <div class="upgrades">
-                <div class="upgrade-item">
-                    <button class="upgrade-btn" onclick="buyUpgrade('power')">
-                        Усилитель клика (+1 к силе)<br>
-                        <span class="price">Цена: 10 кликов</span>
+                <div class="upgrade-item pixel-card">
+                    <button class="upgrade-btn pixel-button" onclick="buyUpgrade('power')">
+                        <span class="upgrade-icon">💪</span>
+                        <span class="upgrade-text">Усилитель клика</span>
+                        <span class="upgrade-desc">+1 к силе клика</span>
+                        <span class="price">💰 Цена: <span id="power-cost">10</span> кликов</span>
                     </button>
                 </div>
-                <div class="upgrade-item">
-                    <button class="upgrade-btn" id="auto-clicker-btn" onclick="toggleAutoClicker()">
-                        <span id="auto-clicker-text">Автокликер (+1 клик/сек)</span><br>
-                        <span class="price">Цена: 30 кликов</span>
+                <div class="upgrade-item pixel-card">
+                    <button class="upgrade-btn pixel-button" id="auto-clicker-btn" onclick="toggleAutoClicker()">
+                        <span class="upgrade-icon">⚡</span>
+                        <span class="upgrade-text">Автокликер</span>
+                        <span class="upgrade-desc" id="auto-desc">+1 клик/сек</span>
+                        <span class="price">💰 Цена: <span id="auto-cost">30</span> кликов</span>
                         <span class="auto-status" id="auto-status">🔴 Выкл</span>
                     </button>
                 </div>
-                <div class="upgrade-item">
-                    <button class="upgrade-btn" onclick="buyUpgrade('mega')">
-                        Мега-буст (x2 вся сила)<br>
-                        <span class="price">Цена: 100 кликов</span>
+                <div class="upgrade-item pixel-card">
+                    <button class="upgrade-btn pixel-button" onclick="buyUpgrade('mega')">
+                        <span class="upgrade-icon">🌟</span>
+                        <span class="upgrade-text">Мега-буст</span>
+                        <span class="upgrade-desc">x2 вся сила</span>
+                        <span class="price">💰 Цена: <span id="mega-cost">100</span> кликов</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- НОВЫЙ РАЗДЕЛ: Достижения -->
+        <!-- НОВЫЕ БУСТЫ -->
+        <div class="boosts-section">
+            <h2>🚀 Мощные бусты</h2>
+            <div class="boosts-grid">
+                <div class="boost-item pixel-card">
+                    <button class="boost-btn pixel-button" onclick="buyBoost('critical')">
+                        <span class="boost-icon">🎯</span>
+                        <span class="boost-name">Критический удар</span>
+                        <span class="boost-desc">Шанс 10% на x3 урон</span>
+                        <span class="boost-price">🎫 50 кликов</span>
+                    </button>
+                </div>
+                <div class="boost-item pixel-card">
+                    <button class="boost-btn pixel-button" onclick="buyBoost('timewarp')">
+                        <span class="boost-icon">⏰</span>
+                        <span class="boost-name">Искажение времени</span>
+                        <span class="boost-desc">x2 скорость на 30 сек</span>
+                        <span class="boost-price">🎫 80 кликов</span>
+                    </button>
+                </div>
+                <div class="boost-item pixel-card">
+                    <button class="boost-btn pixel-button" onclick="buyBoost('golden')">
+                        <span class="boost-icon">🏆</span>
+                        <span class="boost-name">Золотой клик</span>
+                        <span class="boost-desc">След. 10 кликов x5</span>
+                        <span class="boost-price">🎫 120 кликов</span>
+                    </button>
+                </div>
+                <div class="boost-item pixel-card">
+                    <button class="boost-btn pixel-button" onclick="buyBoost('rainbow')">
+                        <span class="boost-icon">🌈</span>
+                        <span class="boost-name">Радужная магия</span>
+                        <span class="boost-desc">Все бусты x1.5 на 1 мин</span>
+                        <span class="boost-price">🎫 200 кликов</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="achievements">
             <h2>🏆 Достижения</h2>
             <div class="achievements-grid" id="achievements-grid">
@@ -59,14 +149,21 @@
         </div>
 
         <div class="leaderboard">
-            <h2>📊 Таблица лидеров</h2>
-            <div id="leaderboard-list"></div>
+            <h2>👥 Таблица лидеров</h2>
+            <div class="leaderboard-header">
+                <span>Игрок</span>
+                <span>Очки</span>
+                <span>Уровень</span>
+            </div>
+            <div id="leaderboard-list">
+                <!-- Лидерборд будет здесь -->
+            </div>
         </div>
     </div>
 
     <!-- Модальное окно для достижений -->
     <div id="achievement-popup" class="popup hidden">
-        <div class="popup-content">
+        <div class="popup-content pixel-card">
             <span class="close-popup">&times;</span>
             <h3>🎉 Новое достижение!</h3>
             <div id="popup-achievement-content"></div>
@@ -75,14 +172,23 @@
 
     <!-- Модальное окно для фонового заработка -->
     <div id="background-popup" class="popup hidden">
-        <div class="popup-content">
+        <div class="popup-content pixel-card">
             <span class="close-popup" onclick="closeBackgroundPopup()">&times;</span>
             <h3>💰 Фоновый заработок!</h3>
             <div id="background-popup-content">
                 <p>Пока вы отсутствовали, ваш автокликер заработал:</p>
                 <div class="background-earned-amount" id="background-earned-amount">0 кликов</div>
-                <p class="background-note">💡 Автокликер работает на 75% эффективности когда приложение закрыто</p>
+                <p class="background-note">💡 Автокликер работает на 25% эффективности когда приложение закрыто</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Уведомление о возвращении -->
+    <div id="notification-popup" class="popup hidden">
+        <div class="popup-content pixel-card">
+            <h3>⏰ Время кликать!</h3>
+            <p>Ваш автокликер соскучился! Вернитесь в игру за новыми достижениями! 🎮</p>
+            <button class="pixel-button" onclick="closeNotification()">Понятно!</button>
         </div>
     </div>
 
