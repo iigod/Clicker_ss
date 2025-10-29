@@ -8,29 +8,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Приветственный экран -->
-    <div id="welcome-screen" class="welcome-screen">
-        <div class="welcome-content">
-            <div class="pixel-title">🎮 Pixel Clicker</div>
-            <div class="welcome-text">
-                <p>Добро пожаловать в уютный пиксельный мир!</p>
-                <p>Кликай, улучшай и соревнуйся с друзьями!</p>
-                <div class="pixel-divider"></div>
-                <p class="feature">⚡ Автокликер</p>
-                <p class="feature">🎯 Система достижений</p>
-                <p class="feature">🏆 Таблица лидеров</p>
-                <p class="feature">💎 Мощные бусты</p>
-            </div>
-            <div class="other-game">
-                <p>Также попробуйте нашу новую игру:</p>
-                <a href="#" id="other-game-link" class="pixel-button">🚀 Cosmic Adventure</a>
-            </div>
-            <div class="swipe-hint">← Свайпните, чтобы начать →</div>
-        </div>
-    </div>
-
     <!-- Основной интерфейс -->
-    <div id="main-interface" class="container hidden">
+    <div class="container">
         <div class="header">
             <h1 class="pixel-title">🎮 Pixel Clicker</h1>
             <div class="user-info" id="user-info"></div>
@@ -43,7 +22,7 @@
 
         <div class="counter-section">
             <div class="score" id="score">0</div>
-            <button class="click-btn pixel-button" id="click-btn">🎯 КЛИКНИ МЕНЯ!</button>
+        <button class="click-btn pixel-button" id="click-btn">🎯 КЛИКНИ МЕНЯ!</button>
             <div class="stats">
                 <p>📊 Кликов в секунду: <span id="cps">0</span></p>
                 <p>💪 Сила клика: <span id="power">1</span></p>
